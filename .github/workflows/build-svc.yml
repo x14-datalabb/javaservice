@@ -1,0 +1,42 @@
+name: Build x14javaservice.exe
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build-service:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Publish service (net8.0-windows)
+        working-directory: ConnectAgent.Service
+        run: |
+          dotnet restore
+          dotnet publish -c Release -r win-x64 \
+            -p:PublishSingleFile=true \
+            -p:PublishTrimmed=false \
+            -p:AssemblyName=x14javaservice
+
+      - name: Release x14javaservice.exe to tag svc-latest
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: svc-latest
+          name: Service latest
+          prerelease: true
+          make_latest: true
+          files: |
+            ConnectAgent.Service/bin/Release/net8.0-windows/win-x64/publish/x14javaservice.exe
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
