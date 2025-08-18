@@ -36,12 +36,12 @@ sealed class Worker(ILogger<Worker> log) : BackgroundService
 
 protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 {
-    var serviceName = "Sorcerer"; // must match MSI ServiceInstall/Name
-    var svcEnv = ReadServiceEnvironment(serviceName);
+    var serviceName = "Sorcerer"; // must match MSI
+    var svcEnv   = ServiceEnv.Read(serviceName);
 
-    var childExe = GetEnvFrom(svcEnv, "X14_CHILD_EXE");
-    var childArgs = GetEnvFrom(svcEnv, "X14_CHILD_ARGS", "");
-    var childCwd = GetEnvFrom(svcEnv, "X14_CHILD_CWD", AppContext.BaseDirectory) ?? AppContext.BaseDirectory;
+    var childExe  = ServiceEnv.Get(svcEnv, "X14_CHILD_EXE");
+    var childArgs = ServiceEnv.Get(svcEnv, "X14_CHILD_ARGS", "");
+    var childCwd  = ServiceEnv.Get(svcEnv, "X14_CHILD_CWD", AppContext.BaseDirectory) ?? AppContext.BaseDirectory;
 
     _log.LogInformation("Service starting. ChildExe={ChildExe} Args='{Args}' Cwd={Cwd}",
         childExe ?? "(none)", childArgs, childCwd);
