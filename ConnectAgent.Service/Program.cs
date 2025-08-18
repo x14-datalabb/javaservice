@@ -131,31 +131,35 @@ protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     }
 }
 
-static Dictionary<string, string> ReadServiceEnvironment(string serviceName)
-{
-    var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-    using var key = Registry.LocalMachine.OpenSubKey($@"SYSTEM\CurrentControlSet\Services\{serviceName}", false);
-    if (key is null) return dict;
 
-    if (key.GetValue("Environment") is string[] multi)
+static class ServiceEnv
+{
+    public static Dictionary<string, string> Read(string serviceName)
     {
-        foreach (var line in multi)
+        var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        using var key = Registry.LocalMachine.OpenSubKey($@"SYSTEM\CurrentControlSet\Services\{serviceName}", false);
+        if (key is null) return dict;
+
+        if (key.GetValue("Environment") is string[] multi)
         {
-            var idx = line.IndexOf('=');
-            if (idx > 0)
+            foreach (var line in multi)
             {
-                var name = line[..idx].Trim();
-                var val  = line[(idx + 1)..];
-                if (name.Length > 0) dict[name] = val;
+                var idx = line.IndexOf('=');
+                if (idx > 0)
+                {
+                    var name = line[..idx].Trim();
+                    var val  = line[(idx + 1)..];
+                    if (name.Length > 0) dict[name] = val;
+                }
             }
         }
+        return dict;
     }
-    return dict;
-}
 
-static string? GetEnvFrom(Dictionary<string,string> env, string name, string? fallback = null)
-{
-    if (env.TryGetValue(name, out var v) && !string.IsNullOrWhiteSpace(v)) return v;
-    v = Environment.GetEnvironmentVariable(name);
-    return string.IsNullOrWhiteSpace(v) ? fallback : v;
+    public static string? Get(Dictionary<string,string> env, string name, string? fallback = null)
+    {
+        if (env.TryGetValue(name, out var v) && !string.IsNullOrWhiteSpace(v)) return v;
+        v = Environment.GetEnvironmentVariable(name);
+        return string.IsNullOrWhiteSpace(v) ? fallback : v;
+    }
 }
