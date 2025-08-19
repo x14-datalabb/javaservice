@@ -16,7 +16,7 @@ var builder = Host.CreateDefaultBuilder(args)
     .ConfigureLogging((ctx, logging) =>
     {
         logging.ClearProviders();
-        logging.AddEventLog(cfg => { cfg.SourceName = "ConnectSvc"; cfg.LogName = "Application"; });
+        logging.AddEventLog(cfg => { cfg.SourceName = "Sorcerer"; cfg.LogName = "Application"; });
         logging.AddConsole();
     })
     .ConfigureServices(services => services.AddHostedService<Worker>());
