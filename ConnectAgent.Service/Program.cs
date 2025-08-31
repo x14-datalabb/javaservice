@@ -62,8 +62,15 @@ protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         }
         else
         {
-            var paths = PathHelpers.ReadValidPaths(childArgs);
-            var finalArgs = paths.Length > 0 ? PathHelpers.PathsToArgs(paths) : childArgs;
+            var (validPaths, missingPaths) = PathHelpers.ReadValidAndMissingPaths(childArgs);
+
+            if (missingPaths.Length > 0)
+                foreach (var m in missingPaths)
+                _log.LogWarning("X14 CDC Config path does not exist: {Path}", m);
+
+            var finalArgs = validPaths.Length > 0 ? PathHelpers.PathsToArgs(validPaths) : childArgs;
+
+            
             var psi = new ProcessStartInfo
             {
                 FileName = exePath,
@@ -171,22 +178,26 @@ static class ServiceEnv
 static class PathHelpers
 {
     // Read lines from file, trim, keep only existing files
-    public static string[] ReadValidPaths(string pathFile)
-    {
-        if (!File.Exists(pathFile)) return Array.Empty<string>();
+public static (string[] valid, string[] missing) ReadValidAndMissingPaths(string pathFile)
+{
+    if (!File.Exists(pathFile)) return (Array.Empty<string>(), Array.Empty<string>());
 
-        try
-        {
-            return File.ReadAllLines(pathFile)
-                       .Select(l => l.Trim())
-                       .Where(l => !string.IsNullOrEmpty(l) && File.Exists(l))
-                       .ToArray();
-        }
-        catch
-        {
-            return Array.Empty<string>();
-        }
+    try
+    {
+        var all = File.ReadAllLines(pathFile)
+                      .Select(l => l.Trim())
+                      .Where(l => !string.IsNullOrEmpty(l))
+                      .ToArray();
+
+        var valid   = all.Where(File.Exists).ToArray();
+        var missing = all.Except(valid).ToArray();
+        return (valid, missing);
     }
+    catch
+    {
+        return (Array.Empty<string>(), Array.Empty<string>());
+    }
+}
 
     // Join paths into CLI-safe string (quoted)
     public static string PathsToArgs(string[] paths)
