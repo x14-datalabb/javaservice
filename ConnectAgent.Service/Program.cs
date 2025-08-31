@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System.Linq;
 
 var builder = Host.CreateDefaultBuilder(args)
     .UseWindowsService(o => o.ServiceName = "Sorcerer")
@@ -61,10 +62,12 @@ protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         }
         else
         {
+            var paths = PathHelpers.ReadValidPaths(childArgs);
+            var finalArgs = paths.Length > 0 ? PathHelpers.PathsToArgs(paths) : childArgs;
             var psi = new ProcessStartInfo
             {
                 FileName = exePath,
-                Arguments = childArgs,
+                Arguments = finalArgs,
                 WorkingDirectory = childCwd,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
@@ -163,3 +166,32 @@ static class ServiceEnv
         return string.IsNullOrWhiteSpace(v) ? fallback : v;
     }
 }
+
+
+static class PathHelpers
+{
+    // Read lines from file, trim, keep only existing files
+    public static string[] ReadValidPaths(string pathFile)
+    {
+        if (!File.Exists(pathFile)) return Array.Empty<string>();
+
+        try
+        {
+            return File.ReadAllLines(pathFile)
+                       .Select(l => l.Trim())
+                       .Where(l => !string.IsNullOrEmpty(l) && File.Exists(l))
+                       .ToArray();
+        }
+        catch
+        {
+            return Array.Empty<string>();
+        }
+    }
+
+    // Join paths into CLI-safe string (quoted)
+    public static string PathsToArgs(string[] paths)
+    {
+        return string.Join(' ', paths.Select(p => $"\"{p}\""));
+    }
+}
+
