@@ -46,6 +46,7 @@ protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 
     _log.LogInformation("Service starting. ChildExe={ChildExe} Args='{Args}' Cwd={Cwd}",
         childExe ?? "(none)", childArgs, childCwd);
+        
 
     if (!string.IsNullOrWhiteSpace(childExe))
     {
@@ -96,7 +97,8 @@ protected override async Task ExecuteAsync(CancellationToken stoppingToken)
             }
             _child.BeginOutputReadLine();
             _child.BeginErrorReadLine();
-            _log.LogInformation("Child PID {Pid} started. Command: \"{Exe}\" {Args}", _child.Id, exePath, childArgs);
+            _log.LogInformation("Child PID {Pid} started. Command: \"{Exe}\" {Args}", _child.Id, exePath, finalArgs);
+
         }
     }
 
