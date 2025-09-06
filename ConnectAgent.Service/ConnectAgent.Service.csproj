@@ -10,7 +10,6 @@
 
     <!-- Shrink build -->
     <PublishTrimmed>true</PublishTrimmed>
-    <PublishAot>true</PublishAot>                     <!-- Native AOT -->
     <SelfContained>true</SelfContained>              <!-- include runtime -->
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <DebugType>none</DebugType>                       <!-- no PDBs -->
