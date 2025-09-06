@@ -35,10 +35,9 @@ jobs:
             ConnectAgent.Service/bin/Release/net8.0-windows/win-x64/publish/x14javaservice.exe
           fail_on_unmatched_files: true
       - name: Generate checksum
+        working-directory: ConnectAgent.Service
         run: |
-          cd publish
-          sha256sum x14javaservice.exe > x14javaservice.exe.sha256
-          cat x14javaservice.exe.sha256
-                    
+          sha256sum bin/Release/net8.0-windows/win-x64/x14javaservice.exe > bin/Release/net8.0-windows/win-x64/x14javaservice.exe.sha256
+          cat bin/Release/net8.0-windows/win-x64/x14javaservice.exe.sha256                    
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
