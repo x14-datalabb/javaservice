@@ -23,11 +23,7 @@ jobs:
         working-directory: ConnectAgent.Service
         run: |
           dotnet restore
-          dotnet publish -c Release -r win-x64 \
-            -p:PublishSingleFile=true \
-            -p:PublishTrimmed=false \
-            -p:AssemblyName=x14javaservice
-
+          dotnet publish -c Release -r win-x64
       - name: Release x14javaservice.exe to tag svc-latest
         uses: softprops/action-gh-release@v2
         with:
