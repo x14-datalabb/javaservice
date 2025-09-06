@@ -9,7 +9,6 @@
     <AssemblyName>x14javaservice</AssemblyName>
 
     <!-- Shrink build -->
-    <PublishSingleFile>true</PublishSingleFile>       <!-- single exe -->
     <PublishTrimmed>true</PublishTrimmed>
     <PublishAot>true</PublishAot>                     <!-- Native AOT -->
     <SelfContained>true</SelfContained>              <!-- include runtime -->
