@@ -9,6 +9,7 @@
     <AssemblyName>x14javaservice</AssemblyName>
 
     <!-- Shrink build -->
+    <PublishSingleFile>true</PublishSingleFile>
     <PublishTrimmed>true</PublishTrimmed>
     <SelfContained>true</SelfContained>              <!-- include runtime -->
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
