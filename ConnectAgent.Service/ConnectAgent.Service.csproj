@@ -10,6 +10,7 @@
 
     <!-- Shrink build -->
     <PublishSingleFile>true</PublishSingleFile>       <!-- single exe -->
+    <PublishTrimmed>true</PublishTrimmed>
     <PublishAot>true</PublishAot>                     <!-- Native AOT -->
     <SelfContained>true</SelfContained>              <!-- include runtime -->
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
