@@ -67,9 +67,22 @@ protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 
             // check connect.cfg
             var cfgPath = Path.Combine(childCwd, "config", "connect.cfg");
+            _log.LogInformation("X14 CDC will read sources from config: " + cfgPath);
+
             if (File.Exists(cfgPath))
             {
+                _log.LogInformation("X14 CDC is about to traverse sources from config: " + cfgPath);
+
                 var (validPaths, missingPaths) = PathHelpers.ReadValidAndMissingPaths(cfgPath);
+
+
+                // log valid paths
+                foreach (var v in validPaths)
+                    _log.LogInformation("Path from connect.cfg exists: " + v);
+
+                // log if both empty
+                if (validPaths.Length == 0 && missingPaths.Length == 0)
+                    _log.LogInformation("connect.cfg exists but contains no valid or missing paths: " + cfgPath);
 
                 foreach (var m in missingPaths)
                     _log.LogWarning("Given path to X14 CDC source config: {Path} in connect.cfg path does not exist", m);
@@ -204,6 +217,8 @@ public static (string[] valid, string[] missing) ReadValidAndMissingPaths(string
 
         var valid   = all.Where(File.Exists).ToArray();
         var missing = all.Except(valid).ToArray();
+
+
         return (valid, missing);
     }
     catch
