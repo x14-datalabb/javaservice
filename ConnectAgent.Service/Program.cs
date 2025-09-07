@@ -107,7 +107,7 @@ protected override async Task ExecuteAsync(CancellationToken stoppingToken)
             }
             _child.BeginOutputReadLine();
             _child.BeginErrorReadLine();
-            _log.LogInformation("Child PID {Pid} started. Command: \"{Exe}\" {Args}", _child.Id, exePath, finalArgs);
+            _log.LogInformation("Child PID {Pid} started. Command: \"{Exe}\" {Args}", _child.Id, exePath, childArgs);
 
         }
     }
