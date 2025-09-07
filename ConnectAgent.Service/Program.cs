@@ -37,7 +37,7 @@ sealed class Worker(ILogger<Worker> log) : BackgroundService
 
 protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 {
-    var serviceName = "Sorcerer"; // must match MSI
+    var serviceName = "Sorcerer"; // Must match MSI
     var svcEnv   = ServiceEnv.Read(serviceName);
 
     var childExe  = ServiceEnv.Get(svcEnv, "X14_CHILD_EXE");
