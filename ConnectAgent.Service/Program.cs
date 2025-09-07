@@ -72,6 +72,14 @@ protected override async Task ExecuteAsync(CancellationToken stoppingToken)
             _log.LogInformation("Full path: >{Path}<", Path.GetFullPath(cfgPath));
             _log.LogInformation("Exists? {Exists}", File.Exists(cfgPath));
 
+cfgPath = Path.GetFullPath(cfgPath).Trim().Trim('"');
+if (File.Exists(cfgPath))
+    _log.LogInformation("Found config at {Path}", cfgPath);
+else
+    _log.LogError("Still missing: {Path}", cfgPath);
+
+
+
             if (File.Exists(cfgPath))
             {
                 _log.LogInformation("X14 CDC is about to traverse sources from config: " + cfgPath);
