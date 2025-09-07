@@ -68,6 +68,9 @@ protected override async Task ExecuteAsync(CancellationToken stoppingToken)
             // check connect.cfg
             var cfgPath = Path.Combine(childCwd, "config", "connect.cfg");
             _log.LogInformation("X14 CDC will read sources from config: " + cfgPath);
+            _log.LogInformation("cfgPath: >{Path}<", cfgPath);
+            _log.LogInformation("Full path: >{Path}<", Path.GetFullPath(cfgPath));
+            _log.LogInformation("Exists? {Exists}", File.Exists(cfgPath));
 
             if (File.Exists(cfgPath))
             {
