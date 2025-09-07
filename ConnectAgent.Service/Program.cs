@@ -94,6 +94,7 @@ protected override async Task ExecuteAsync(CancellationToken stoppingToken)
                 }
             }
 
+            _log.LogInformation("Final child command: \"{Exe}\" {Args}", exePath, childArgs);
 
             var psi = new ProcessStartInfo
             {
