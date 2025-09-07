@@ -46,7 +46,7 @@ protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 
     _log.LogInformation("Service starting. ChildExe={ChildExe} Args='{Args}' Cwd={Cwd}",
         childExe ?? "(none)", childArgs, childCwd);
-        
+
 
     if (!string.IsNullOrWhiteSpace(childExe))
     {
@@ -63,19 +63,29 @@ protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         }
         else
         {
-            var (validPaths, missingPaths) = PathHelpers.ReadValidAndMissingPaths(childArgs);
 
-            if (missingPaths.Length > 0)
+
+            // check connect.cfg
+            var cfgPath = Path.Combine(childCwd, "config", "connect.cfg");
+            if (File.Exists(cfgPath))
+            {
+                var (validPaths, missingPaths) = PathHelpers.ReadValidAndMissingPaths(cfgPath);
+
                 foreach (var m in missingPaths)
-                _log.LogWarning("X14 CDC Config path does not exist: {Path}", m);
+                    _log.LogWarning("Given path to X14 CDC source config: {Path} in connect.cfg path does not exist", m);
 
-            var finalArgs = validPaths.Length > 0 ? PathHelpers.PathsToArgs(validPaths) : childArgs;
+                if (validPaths.Length > 0)
+                {
+                    childArgs = $"{childArgs} {PathHelpers.PathsToArgs(validPaths)}";
+                    _log.LogInformation("Appended {Count} paths from {Cfg}", validPaths.Length, cfgPath);
+                }
+            }
 
-            
+
             var psi = new ProcessStartInfo
             {
                 FileName = exePath,
-                Arguments = finalArgs,
+                Arguments = childArgs,
                 WorkingDirectory = childCwd,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
@@ -179,6 +189,7 @@ static class ServiceEnv
 
 static class PathHelpers
 {
+
     // Read lines from file, trim, keep only existing files
 public static (string[] valid, string[] missing) ReadValidAndMissingPaths(string pathFile)
 {
@@ -207,4 +218,3 @@ public static (string[] valid, string[] missing) ReadValidAndMissingPaths(string
         return string.Join(' ', paths.Select(p => $"\"{p}\""));
     }
 }
-
