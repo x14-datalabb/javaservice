@@ -243,14 +243,22 @@ static class PathHelpers
 
         try
         {
+            // Determine base folder (one level above current bin folder)
+            var exeDir = ResolvePath(".");
+            var parentDir = Path.GetFullPath(Path.Combine(exeDir, ".."));
+
             var all = File.ReadAllLines(pathFile)
                 .Select(l => l.Trim())
                 .Where(l => !string.IsNullOrEmpty(l))
+                .Select(p =>
+                {
+                    // Make each path absolute relative to parentDir
+                    return Path.IsPathRooted(p) ? Path.GetFullPath(p) : Path.GetFullPath(Path.Combine(parentDir, p));
+                })
                 .ToArray();
 
             var valid = all.Where(File.Exists).ToArray();
             var missing = all.Except(valid).ToArray();
-
 
             return (valid, missing);
         }
@@ -259,7 +267,6 @@ static class PathHelpers
             return (Array.Empty<string>(), Array.Empty<string>());
         }
     }
-
     // Join paths into CLI-safe string (quoted)
     public static string PathsToArgs(string[] paths)
     {
