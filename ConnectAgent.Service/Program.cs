@@ -60,9 +60,9 @@ sealed class Worker(ILogger<Worker> log) : BackgroundService
         {
             Directory.CreateDirectory(childCwd);
 
-            var exePath = ResolvePath(childExe!);
+            var exePath = PathHelpers.ResolvePath(childExe!);
 
-            var exeDir = ResolvePath(".");                   // resolve current working folder (likely bin)
+            var exeDir = PathHelpers.ResolvePath(".");                   // resolve current working folder (likely bin)
             var parentDir = Path.GetFullPath(Path.Combine(exeDir, "..")); // step up one level
             var cfgPath = Path.Combine(parentDir, "config", "connect.cfg");
 
@@ -245,7 +245,7 @@ static class PathHelpers
         try
         {
             // Determine base folder (one level above current bin folder)
-            var exeDir = ResolvePath(".");
+            var exeDir = PathHelpers.ResolvePath(".");
             var parentDir = Path.GetFullPath(Path.Combine(exeDir, ".."));
 
             var all = File.ReadAllLines(pathFile)
