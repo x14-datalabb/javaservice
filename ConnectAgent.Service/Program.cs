@@ -1,5 +1,6 @@
 // .NET 8 Windows Service that can supervise a child process (optional).
 // Defaults: runs idle loop. Set env X14_CHILD_EXE / X14_CHILD_ARGS to run a child.
+
 using System.Collections.Generic;
 using Microsoft.Win32;
 using System;
@@ -17,7 +18,11 @@ var builder = Host.CreateDefaultBuilder(args)
     .ConfigureLogging((ctx, logging) =>
     {
         logging.ClearProviders();
-        logging.AddEventLog(cfg => { cfg.SourceName = "Sorcerer"; cfg.LogName = "Application"; });
+        logging.AddEventLog(cfg =>
+        {
+            cfg.SourceName = "Sorcerer";
+            cfg.LogName = "Application";
+        });
         logging.AddConsole();
     })
     .ConfigureServices(services => services.AddHostedService<Worker>());
@@ -30,42 +35,44 @@ sealed class Worker(ILogger<Worker> log) : BackgroundService
     private Process? _child;
 
     // Configure child via env vars (optional). If X14_CHILD_EXE is unset, runs an idle loop.
-    private static readonly string? ChildExe  = GetEnvPath("X14_CHILD_EXE"); // e.g. "jdk\\bin\\java.exe" or "agent\\agent.exe"
-    private static readonly string  ChildArgs = Environment.GetEnvironmentVariable("X14_CHILD_ARGS") ?? "";
-    private static readonly string  ChildCwd  = Environment.GetEnvironmentVariable("X14_CHILD_CWD")
-                                                ?? AppContext.BaseDirectory;
+    private static readonly string?
+        ChildExe = GetEnvPath("X14_CHILD_EXE"); // e.g. "jdk\\bin\\java.exe" or "agent\\agent.exe"
 
-protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-{
-    var serviceName = "Sorcerer"; // Must match MSI
-    var svcEnv   = ServiceEnv.Read(serviceName);
+    private static readonly string ChildArgs = Environment.GetEnvironmentVariable("X14_CHILD_ARGS") ?? "";
 
-    var childExe  = ServiceEnv.Get(svcEnv, "X14_CHILD_EXE");
-    var childArgs = ServiceEnv.Get(svcEnv, "X14_CHILD_ARGS", "");
-    var childCwd  = ServiceEnv.Get(svcEnv, "X14_CHILD_CWD", AppContext.BaseDirectory) ?? AppContext.BaseDirectory;
+    private static readonly string ChildCwd = Environment.GetEnvironmentVariable("X14_CHILD_CWD")
+                                              ?? AppContext.BaseDirectory;
 
-    _log.LogInformation("Service starting. ChildExe={ChildExe} Args='{Args}' Cwd={Cwd}",
-        childExe ?? "(none)", childArgs, childCwd);
-
-
-    if (!string.IsNullOrWhiteSpace(childExe))
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        Directory.CreateDirectory(childCwd);
+        var serviceName = "Sorcerer"; // Must match MSI
+        var svcEnv = ServiceEnv.Read(serviceName);
 
-        var exePath = ResolvePath(childExe!);
-        var cfgPath = ResolvePath(Path.Combine("config", "connect.cfg"));
+        var childExe = ServiceEnv.Get(svcEnv, "X14_CHILD_EXE");
+        var childArgs = ServiceEnv.Get(svcEnv, "X14_CHILD_ARGS", "");
+        var childCwd = ServiceEnv.Get(svcEnv, "X14_CHILD_CWD", AppContext.BaseDirectory) ?? AppContext.BaseDirectory;
 
-        _log.LogInformation("Child executable : {Path} Exists={Exists}", exePath, File.Exists(exePath));
-        _log.LogInformation("Cfg: {Path} Exists={Exists}", cfgPath, File.Exists(cfgPath));
+        _log.LogInformation("Service starting. ChildExe={ChildExe} Args='{Args}' Cwd={Cwd}",
+            childExe ?? "(none)", childArgs, childCwd);
 
-        if (!File.Exists(exePath))
+
+        if (!string.IsNullOrWhiteSpace(childExe))
         {
-            _log.LogError("Will idle .. since child executable not found: {Path}", exePath);
-            // keep running as a service, but don’t crash
-        }
-        else
-        {
+            Directory.CreateDirectory(childCwd);
 
+            var exePath = ResolvePath(childExe!);
+            var cfgPath = ResolvePath(Path.Combine("config", "connect.cfg"));
+
+            _log.LogInformation("Child executable : {Path} Exists={Exists}", exePath, File.Exists(exePath));
+            _log.LogInformation("Cfg: {Path} Exists={Exists}", cfgPath, File.Exists(cfgPath));
+
+            if (!File.Exists(exePath))
+            {
+                _log.LogError("Will idle .. since child executable not found: {Path}", exePath);
+                // keep running as a service, but don’t crash
+            }
+            else
+            {
                 _log.LogInformation("X14 CDC is about to traverse sources from config: " + cfgPath);
 
                 var (validPaths, missingPaths) = PathHelpers.ReadValidAndMissingPaths(cfgPath);
@@ -80,7 +87,8 @@ protected override async Task ExecuteAsync(CancellationToken stoppingToken)
                     _log.LogInformation("connect.cfg exists but contains no valid or missing paths: " + cfgPath);
 
                 foreach (var m in missingPaths)
-                    _log.LogWarning("Given path to X14 CDC source config: {Path} in connect.cfg path does not exist", m);
+                    _log.LogWarning("Given path to X14 CDC source config: {Path} in connect.cfg path does not exist",
+                        m);
 
                 if (validPaths.Length > 0)
                 {
@@ -88,47 +96,57 @@ protected override async Task ExecuteAsync(CancellationToken stoppingToken)
                     _log.LogInformation("Appended {Count} paths from {Cfg}", validPaths.Length, cfgPath);
                 }
 
-            _log.LogInformation("Final child command: \"{Exe}\" {Args}", exePath, childArgs);
+                _log.LogInformation("Final child command: \"{Exe}\" {Args}", exePath, childArgs);
 
-            var psi = new ProcessStartInfo
-            {
-                FileName = exePath,
-                Arguments = childArgs,
-                WorkingDirectory = childCwd,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError  = true,
-                CreateNoWindow = true
-            };
+                var psi = new ProcessStartInfo
+                {
+                    FileName = exePath,
+                    Arguments = childArgs,
+                    WorkingDirectory = childCwd,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
 
-            // optional: propagate the same env to the child (not required for your current X14_CHILD_* use)
-            // foreach (var kv in svcEnv) psi.Environment[kv.Key] = kv.Value;
+                // optional: propagate the same env to the child (not required for your current X14_CHILD_* use)
+                // foreach (var kv in svcEnv) psi.Environment[kv.Key] = kv.Value;
 
-            _child = new Process { StartInfo = psi, EnableRaisingEvents = true };
-            _child.OutputDataReceived += (_, e) => { if (e.Data is not null) _log.LogInformation("[child] {Line}", e.Data); };
-            _child.ErrorDataReceived  += (_, e) => { if (e.Data is not null) _log.LogError("[child] {Line}", e.Data); };
+                _child = new Process { StartInfo = psi, EnableRaisingEvents = true };
+                _child.OutputDataReceived += (_, e) =>
+                {
+                    if (e.Data is not null) _log.LogInformation("[child] {Line}", e.Data);
+                };
+                _child.ErrorDataReceived += (_, e) =>
+                {
+                    if (e.Data is not null) _log.LogError("[child] {Line}", e.Data);
+                };
 
-            if (!_child.Start())
-            {
-                _log.LogError("Failed to start child process.");
-                throw new InvalidOperationException("Child process failed to start.");
+                if (!_child.Start())
+                {
+                    _log.LogError("Failed to start child process.");
+                    throw new InvalidOperationException("Child process failed to start.");
+                }
+
+                _child.BeginOutputReadLine();
+                _child.BeginErrorReadLine();
+                _log.LogInformation("Child PID {Pid} started. Command: \"{Exe}\" {Args}", _child.Id, exePath,
+                    childArgs);
             }
-            _child.BeginOutputReadLine();
-            _child.BeginErrorReadLine();
-            _log.LogInformation("Child PID {Pid} started. Command: \"{Exe}\" {Args}", _child.Id, exePath, childArgs);
 
+            try
+            {
+                while (!stoppingToken.IsCancellationRequested && (_child is null || !_child.HasExited))
+                    await Task.Delay(1000, stoppingToken);
+            }
+            catch (OperationCanceledException)
+            {
+            }
 
+            _log.LogInformation("ExecuteAsync exiting.");
+        }
     }
 
-    try
-    {
-        while (!stoppingToken.IsCancellationRequested && (_child is null || !_child.HasExited))
-            await Task.Delay(1000, stoppingToken);
-    }
-    catch (OperationCanceledException) { }
-
-    _log.LogInformation("ExecuteAsync exiting.");
-}
     public override async Task StopAsync(CancellationToken token)
     {
         _log.LogInformation("Stop requested.");
@@ -139,16 +157,26 @@ protected override async Task ExecuteAsync(CancellationToken stoppingToken)
                 // Attempt graceful exit (no window for console apps; this is best-effort)
                 _child.CloseMainWindow();
             }
-            catch { /* ignore */ }
+            catch
+            {
+                /* ignore */
+            }
 
             // Hard kill after grace period
             var waited = _child.WaitForExit(10_000);
             if (!waited)
             {
-                try { _child.Kill(entireProcessTree: true); }
-                catch (Exception ex) { _log.LogWarning(ex, "Kill failed."); }
+                try
+                {
+                    _child.Kill(entireProcessTree: true);
+                }
+                catch (Exception ex)
+                {
+                    _log.LogWarning(ex, "Kill failed.");
+                }
             }
         }
+
         await base.StopAsync(token);
         _log.LogInformation("Stopped.");
     }
@@ -160,13 +188,12 @@ protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         return v.Replace('/', Path.DirectorySeparatorChar);
     }
 
-private static string ResolvePath(string path)
-{
-    return Path.IsPathRooted(path)
-        ? Path.GetFullPath(path)
-        : Path.Combine(AppContext.BaseDirectory, path);
-}
-
+    private static string ResolvePath(string path)
+    {
+        return Path.IsPathRooted(path)
+            ? Path.GetFullPath(path)
+            : Path.Combine(AppContext.BaseDirectory, path);
+    }
 }
 
 
@@ -186,15 +213,16 @@ static class ServiceEnv
                 if (idx > 0)
                 {
                     var name = line[..idx].Trim();
-                    var val  = line[(idx + 1)..];
+                    var val = line[(idx + 1)..];
                     if (name.Length > 0) dict[name] = val;
                 }
             }
         }
+
         return dict;
     }
 
-    public static string? Get(Dictionary<string,string> env, string name, string? fallback = null)
+    public static string? Get(Dictionary<string, string> env, string name, string? fallback = null)
     {
         if (env.TryGetValue(name, out var v) && !string.IsNullOrWhiteSpace(v)) return v;
         v = Environment.GetEnvironmentVariable(name);
@@ -205,30 +233,29 @@ static class ServiceEnv
 
 static class PathHelpers
 {
-
     // Read lines from file, trim, keep only existing files
-public static (string[] valid, string[] missing) ReadValidAndMissingPaths(string pathFile)
-{
-    if (!File.Exists(pathFile)) return (Array.Empty<string>(), Array.Empty<string>());
-
-    try
+    public static (string[] valid, string[] missing) ReadValidAndMissingPaths(string pathFile)
     {
-        var all = File.ReadAllLines(pathFile)
-                      .Select(l => l.Trim())
-                      .Where(l => !string.IsNullOrEmpty(l))
-                      .ToArray();
+        if (!File.Exists(pathFile)) return (Array.Empty<string>(), Array.Empty<string>());
 
-        var valid   = all.Where(File.Exists).ToArray();
-        var missing = all.Except(valid).ToArray();
+        try
+        {
+            var all = File.ReadAllLines(pathFile)
+                .Select(l => l.Trim())
+                .Where(l => !string.IsNullOrEmpty(l))
+                .ToArray();
+
+            var valid = all.Where(File.Exists).ToArray();
+            var missing = all.Except(valid).ToArray();
 
 
-        return (valid, missing);
+            return (valid, missing);
+        }
+        catch
+        {
+            return (Array.Empty<string>(), Array.Empty<string>());
+        }
     }
-    catch
-    {
-        return (Array.Empty<string>(), Array.Empty<string>());
-    }
-}
 
     // Join paths into CLI-safe string (quoted)
     public static string PathsToArgs(string[] paths)
