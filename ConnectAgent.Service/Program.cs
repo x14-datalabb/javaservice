@@ -231,7 +231,7 @@ static class ServiceEnv
 
 static class PathHelpers
 {
-    private static string ResolvePath(string path)
+    public static string ResolvePath(string path)
     {
         return Path.IsPathRooted(path)
             ? Path.GetFullPath(path)
