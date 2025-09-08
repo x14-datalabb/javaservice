@@ -176,6 +176,14 @@ else
         if (string.IsNullOrWhiteSpace(v)) return null;
         return v.Replace('/', Path.DirectorySeparatorChar);
     }
+
+private static string ResolvePath(string path)
+{
+    return Path.IsPathRooted(path)
+        ? Path.GetFullPath(path)
+        : Path.Combine(AppContext.BaseDirectory, path);
+}
+
 }
 
 
