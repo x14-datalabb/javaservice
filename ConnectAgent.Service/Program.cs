@@ -52,9 +52,13 @@ protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         Directory.CreateDirectory(childCwd);
 
-        var exePath = Path.IsPathRooted(childExe!)
-            ? childExe!
-            : Path.Combine(AppContext.BaseDirectory, childExe!);
+var exePath = ResolvePath(childExe!);
+var cfgPath = ResolvePath(Path.Combine("config", "connect.cfg"));
+
+_log.LogInformation("Exe: {Path} Exists={Exists}", exePath, File.Exists(exePath));
+_log.LogInformation("Cfg: {Path} Exists={Exists}", cfgPath, File.Exists(cfgPath));
+
+
 
         if (!File.Exists(exePath))
         {
@@ -66,12 +70,7 @@ protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 
 
             // check connect.cfg
-            var cfgPath = Path.Combine(childCwd, "config", "connect.cfg");
-            _log.LogInformation("X14 CDC will read sources from config: " + cfgPath);
-            _log.LogInformation("cfgPath: >{Path}<", cfgPath);
-            _log.LogInformation("Full path: >{Path}<", Path.GetFullPath(cfgPath));
-            _log.LogInformation("Exists? {Exists}", File.Exists(cfgPath));
-
+           
 cfgPath = Path.GetFullPath(cfgPath).Trim().Trim('"');
 if (File.Exists(cfgPath))
     _log.LogInformation("Found config at {Path}", cfgPath);
