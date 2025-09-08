@@ -52,35 +52,20 @@ protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         Directory.CreateDirectory(childCwd);
 
-var exePath = ResolvePath(childExe!);
-var cfgPath = ResolvePath(Path.Combine("config", "connect.cfg"));
+        var exePath = ResolvePath(childExe!);
+        var cfgPath = ResolvePath(Path.Combine("config", "connect.cfg"));
 
-_log.LogInformation("Exe: {Path} Exists={Exists}", exePath, File.Exists(exePath));
-_log.LogInformation("Cfg: {Path} Exists={Exists}", cfgPath, File.Exists(cfgPath));
-
-
+        _log.LogInformation("Child executable : {Path} Exists={Exists}", exePath, File.Exists(exePath));
+        _log.LogInformation("Cfg: {Path} Exists={Exists}", cfgPath, File.Exists(cfgPath));
 
         if (!File.Exists(exePath))
         {
-            _log.LogError("Child executable not found: {Path}", exePath);
+            _log.LogError("Will idle .. since child executable not found: {Path}", exePath);
             // keep running as a service, but don’t crash
         }
         else
         {
 
-
-            // check connect.cfg
-           
-cfgPath = Path.GetFullPath(cfgPath).Trim().Trim('"');
-if (File.Exists(cfgPath))
-    _log.LogInformation("Found config at {Path}", cfgPath);
-else
-    _log.LogError("Still missing: {Path}", cfgPath);
-
-
-
-            if (File.Exists(cfgPath))
-            {
                 _log.LogInformation("X14 CDC is about to traverse sources from config: " + cfgPath);
 
                 var (validPaths, missingPaths) = PathHelpers.ReadValidAndMissingPaths(cfgPath);
@@ -102,7 +87,6 @@ else
                     childArgs = $"{childArgs} {PathHelpers.PathsToArgs(validPaths)}";
                     _log.LogInformation("Appended {Count} paths from {Cfg}", validPaths.Length, cfgPath);
                 }
-            }
 
             _log.LogInformation("Final child command: \"{Exe}\" {Args}", exePath, childArgs);
 
@@ -133,7 +117,7 @@ else
             _child.BeginErrorReadLine();
             _log.LogInformation("Child PID {Pid} started. Command: \"{Exe}\" {Args}", _child.Id, exePath, childArgs);
 
-        }
+
     }
 
     try
