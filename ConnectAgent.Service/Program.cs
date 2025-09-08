@@ -191,12 +191,7 @@ sealed class Worker(ILogger<Worker> log) : BackgroundService
         return v.Replace('/', Path.DirectorySeparatorChar);
     }
 
-    private static string ResolvePath(string path)
-    {
-        return Path.IsPathRooted(path)
-            ? Path.GetFullPath(path)
-            : Path.Combine(AppContext.BaseDirectory, path);
-    }
+
 }
 
 
@@ -236,6 +231,12 @@ static class ServiceEnv
 
 static class PathHelpers
 {
+    private static string ResolvePath(string path)
+    {
+        return Path.IsPathRooted(path)
+            ? Path.GetFullPath(path)
+            : Path.Combine(AppContext.BaseDirectory, path);
+    }
     // Read lines from file, trim, keep only existing files
     public static (string[] valid, string[] missing) ReadValidAndMissingPaths(string pathFile)
     {
