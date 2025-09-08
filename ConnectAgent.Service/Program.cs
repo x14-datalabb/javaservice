@@ -61,7 +61,10 @@ sealed class Worker(ILogger<Worker> log) : BackgroundService
             Directory.CreateDirectory(childCwd);
 
             var exePath = ResolvePath(childExe!);
-            var cfgPath = ResolvePath(Path.Combine("config", "connect.cfg"));
+
+            var exeDir = ResolvePath(".");                   // resolve current working folder (likely bin)
+            var parentDir = Path.GetFullPath(Path.Combine(exeDir, "..")); // step up one level
+            var cfgPath = Path.Combine(parentDir, "config", "connect.cfg");
 
             _log.LogInformation("Child executable : {Path} Exists={Exists}", exePath, File.Exists(exePath));
             _log.LogInformation("Cfg: {Path} Exists={Exists}", cfgPath, File.Exists(cfgPath));
