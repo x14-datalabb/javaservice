@@ -10,7 +10,8 @@
 
     <!-- Shrink build -->
     <PublishSingleFile>true</PublishSingleFile>
-    <PublishTrimmed>false</PublishTrimmed>
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
     <SelfContained>true</SelfContained>              <!-- include runtime -->
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <DebugType>none</DebugType>                       <!-- no PDBs -->
