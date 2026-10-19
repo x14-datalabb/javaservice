@@ -3,13 +3,29 @@ name: Build x14javaservice.exe
 on:
   push:
     branches: [ "main" ]
+  pull_request: {}
   workflow_dispatch: {}
 
 permissions:
   contents: write
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Test
+        run: dotnet test ConnectAgent.Tests -c Release
+
   build-service:
+    needs: test
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -38,6 +54,6 @@ jobs:
         working-directory: ConnectAgent.Service
         run: |
           sha256sum bin/Release/net8.0-windows/win-x64/x14javaservice.exe > bin/Release/net8.0-windows/win-x64/x14javaservice.exe.sha256
-          cat bin/Release/net8.0-windows/win-x64/x14javaservice.exe.sha256                    
+          cat bin/Release/net8.0-windows/win-x64/x14javaservice.exe.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
