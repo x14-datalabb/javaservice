@@ -48,6 +48,9 @@ sealed class Worker(ILogger<Worker> log, ILoggerFactory loggers) : BackgroundSer
 
     private readonly ILogger<Worker> _log = log;
     private readonly ILogger _childLog = loggers.CreateLogger("Sorcerer.Child");
+    // One REST client and worker certificate for the whole process; the certificate is never
+    // disposed (RestClientCache explains why).
+    private readonly RestClientCache _rest = new(RestTimeout);
     private Process? _child;
     private volatile bool _stopping;
     private volatile Uri? _restFromLog;
@@ -236,13 +239,12 @@ sealed class Worker(ILogger<Worker> log, ILoggerFactory loggers) : BackgroundSer
                 return null;
             }
 
-            using var cert = uri.Scheme == "https" ? ConnectConfig.WorkerCertificate(worker, baseDir) : null;
-            using var client = new ConnectRestClient(uri, cert, RestTimeout);
+            var client = _rest.For(worker, baseDir, uri.Scheme == "https");
 
             IReadOnlyList<ConnectorStatus> status;
             try
             {
-                status = await client.GetStatusAsync(ct);
+                status = await client.GetStatusAsync(uri, ct);
             }
             catch (Exception ex) when (!ct.IsCancellationRequested)
             {
@@ -265,7 +267,7 @@ sealed class Worker(ILogger<Worker> log, ILoggerFactory loggers) : BackgroundSer
                 Exception? error = null;
                 try
                 {
-                    await client.RestartFailedAsync(name, ct);
+                    await client.RestartFailedAsync(uri, name, ct);
                 }
                 catch (Exception ex) when (!ct.IsCancellationRequested)
                 {

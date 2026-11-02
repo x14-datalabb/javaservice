@@ -44,12 +44,16 @@ public sealed record ConnectConfig(string Worker, IReadOnlyList<string> Sources)
     /// </summary>
     public static X509Certificate2 WorkerCertificate(IReadOnlyDictionary<string, string> worker, string baseDir)
     {
+        worker.TryGetValue("ssl.keystore.password", out var password);
+        return new X509Certificate2(KeystorePath(worker, baseDir), password, X509KeyStorageFlags.DefaultKeySet);
+    }
+
+    /// <summary>ssl.keystore.location, relative to the install directory unless rooted.</summary>
+    public static string KeystorePath(IReadOnlyDictionary<string, string> worker, string baseDir)
+    {
         if (!worker.TryGetValue("ssl.keystore.location", out var location) || location.Trim().Length == 0)
             throw new InvalidDataException("the worker file has no ssl.keystore.location");
         location = location.Trim();
-        if (!Path.IsPathRooted(location))
-            location = Path.Combine(baseDir, location);
-        worker.TryGetValue("ssl.keystore.password", out var password);
-        return new X509Certificate2(location, password, X509KeyStorageFlags.DefaultKeySet);
+        return Path.IsPathRooted(location) ? location : Path.Combine(baseDir, location);
     }
 }

@@ -23,9 +23,9 @@ public sealed class ConnectRestClientTests : IDisposable
         server.Connectors["prod_antura"] = ("RUNNING", ["FAILED"]);
         server.Connectors["prod_lime"] = ("RUNNING", ["RUNNING"]);
         using var cert = WorkerFromKeystore();
-        using var client = new ConnectRestClient(server.Uri, cert, Timeout);
+        using var client = new ConnectRestClient(cert, Timeout);
 
-        var status = await client.GetStatusAsync(CancellationToken.None);
+        var status = await client.GetStatusAsync(server.Uri, CancellationToken.None);
 
         Assert.Equal(2, status.Count);
         Assert.Equal("FAILED", status.Single(c => c.Name == "prod_antura").Tasks[0].State);
@@ -39,12 +39,12 @@ public sealed class ConnectRestClientTests : IDisposable
         using var server = new FakeConnect(_pki, _pki.Worker);
         server.Connectors["prod antura"] = ("RUNNING", ["FAILED"]);
         using var cert = WorkerFromKeystore();
-        using var client = new ConnectRestClient(server.Uri, cert, Timeout);
+        using var client = new ConnectRestClient(cert, Timeout);
 
-        await client.RestartFailedAsync("prod antura", CancellationToken.None);
+        await client.RestartFailedAsync(server.Uri, "prod antura", CancellationToken.None);
 
         Assert.Equal("/connectors/prod%20antura/restart?includeTasks=true&onlyFailed=true", Assert.Single(server.Posts));
-        Assert.Equal("RUNNING", (await client.GetStatusAsync(CancellationToken.None))[0].Tasks[0].State);
+        Assert.Equal("RUNNING", (await client.GetStatusAsync(server.Uri, CancellationToken.None))[0].Tasks[0].State);
     }
 
     [Fact]
@@ -54,9 +54,9 @@ public sealed class ConnectRestClientTests : IDisposable
         using var server = new FakeConnect(_pki, _pki.Other);
         server.Connectors["prod_antura"] = ("RUNNING", ["RUNNING"]);
         using var cert = WorkerFromKeystore();
-        using var client = new ConnectRestClient(server.Uri, cert, Timeout);
+        using var client = new ConnectRestClient(cert, Timeout);
 
-        await Assert.ThrowsAnyAsync<HttpRequestException>(() => client.GetStatusAsync(CancellationToken.None));
+        await Assert.ThrowsAnyAsync<HttpRequestException>(() => client.GetStatusAsync(server.Uri, CancellationToken.None));
         Assert.True(client.PinMismatch);
     }
 
@@ -66,9 +66,9 @@ public sealed class ConnectRestClientTests : IDisposable
         using var server = new FakeConnect(_pki, _pki.Worker);
         using var stranger = new TestPki();
         // Pinned to the right server, but presenting a certificate the server does not trust.
-        using var client = new ConnectRestClient(server.Uri, stranger.Worker, Timeout);
+        using var client = new ConnectRestClient(stranger.Worker, Timeout);
 
-        await Assert.ThrowsAnyAsync<Exception>(() => client.GetStatusAsync(CancellationToken.None));
+        await Assert.ThrowsAnyAsync<Exception>(() => client.GetStatusAsync(server.Uri, CancellationToken.None));
         Assert.Empty(server.ClientSubjects);
     }
 
@@ -77,9 +77,28 @@ public sealed class ConnectRestClientTests : IDisposable
     {
         using var server = new FakeConnect(_pki, _pki.Worker) { Hang = true };
         using var cert = WorkerFromKeystore();
-        using var client = new ConnectRestClient(server.Uri, cert, TimeSpan.FromSeconds(1));
+        using var client = new ConnectRestClient(cert, TimeSpan.FromSeconds(1));
 
-        await Assert.ThrowsAnyAsync<Exception>(() => client.GetStatusAsync(CancellationToken.None));
+        await Assert.ThrowsAnyAsync<Exception>(() => client.GetStatusAsync(server.Uri, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task TimeoutInTheHandshakeLeavesTheCertificateUsable()
+    {
+        // app10, 2026-11-02: the request timed out while the handshake was still under way, the
+        // certificate was disposed and the handshake went on with it. Now the same client and
+        // certificate serve the next check.
+        using var hanging = new FakeConnect(_pki, _pki.Worker) { HangHandshake = true };
+        using var server = new FakeConnect(_pki, _pki.Worker);
+        server.Connectors["prod_lime"] = ("RUNNING", ["RUNNING"]);
+        using var cert = WorkerFromKeystore();
+        using var client = new ConnectRestClient(cert, TimeSpan.FromSeconds(1));
+
+        await Assert.ThrowsAnyAsync<Exception>(() => client.GetStatusAsync(hanging.Uri, CancellationToken.None));
+        await Task.Delay(500);
+
+        Assert.Equal("prod_lime", Assert.Single(await client.GetStatusAsync(server.Uri, CancellationToken.None)).Name);
+        Assert.Contains("CN=source_test_x14", Assert.Single(server.ClientSubjects));
     }
 
     [Fact]

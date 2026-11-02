@@ -101,6 +101,8 @@ sealed class FakeConnect : IDisposable
     public ConcurrentQueue<string> Posts { get; } = new();
     public ConcurrentQueue<string> ClientSubjects { get; } = new();
     public volatile bool Hang;
+    /// <summary>Accept TCP connections but never answer the TLS ClientHello.</summary>
+    public volatile bool HangHandshake;
 
     public FakeConnect(TestPki pki, X509Certificate2 serverCert)
     {
@@ -128,6 +130,8 @@ sealed class FakeConnect : IDisposable
         using var _ = client;
         try
         {
+            if (HangHandshake)
+                await Task.Delay(Timeout.Infinite, _cts.Token);
             using var ssl = new SslStream(client.GetStream(), false);
             await ssl.AuthenticateAsServerAsync(new SslServerAuthenticationOptions
             {
