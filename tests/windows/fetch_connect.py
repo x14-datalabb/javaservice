@@ -21,7 +21,9 @@ TEMURIN_API = ("https://api.adoptium.net/v3/assets/latest/17/hotspot"
 
 
 def get(url):
-    with urllib.request.urlopen(url, timeout=120) as r:
+    # The Adoptium API answers 403 to urllib's default User-Agent.
+    request = urllib.request.Request(url, headers={"User-Agent": "sorcerer-e2e-fetch/1"})
+    with urllib.request.urlopen(request, timeout=120) as r:
         return r.read()
 
 
