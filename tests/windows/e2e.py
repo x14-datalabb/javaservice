@@ -134,10 +134,11 @@ def main():
     second_child = child()
     check("new REST address found", found and second_child and second_child != first_child, found[2] if found else "")
 
-    # The REST API stops answering: the child is restarted after 5 checks in a row.
+    # The REST API stops answering: the child is restarted after 5 checks in a row, each waiting
+    # for the 60 s REST timeout.
     t = datetime.datetime.now()
     open(os.path.join(BASE, "hang.flag"), "w").close()
-    e = wait_event(t, 2002, 240)
+    e = wait_event(t, 2002, 480)
     os.remove(os.path.join(BASE, "hang.flag"))
     check("silent REST API restarts the child", e, e[2] if e else "")
     check("REST did not answer was reported first", any(x[0] == "1004" for x in events(t)))
