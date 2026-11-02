@@ -52,6 +52,9 @@ The CDC hosts have no internet, so the REST client goes nowhere but the REST add
 and certificate chains for the client and the server certificate are built from what is on the
 machine, without downloading issuers or revocation lists. The keystore is loaded once and kept
 until the file changes; a certificate is never disposed while a TLS handshake may still use it.
+Windows itself (SChannel in `lsass.exe`) may still try to fetch its root list from Windows Update
+at the first handshakes after a start, which on a host that drops the packets takes 15 s per try,
+so a REST call may take 60 s before it counts as not answered.
 
 ### Events
 

@@ -43,7 +43,11 @@ await builder.Build().RunAsync();
 sealed class Worker(ILogger<Worker> log, ILoggerFactory loggers) : BackgroundService
 {
     const string ServiceName = "Sorcerer"; // Must match MSI
-    static readonly TimeSpan RestTimeout = TimeSpan.FromSeconds(15);
+    // Long enough for SChannel (lsass.exe) to give up fetching the Windows root list for the client
+    // certificate on a host without internet, which it may try at the first handshakes after a
+    // start and which takes Windows' 15 s URL retrieval timeout per attempt. The next check is
+    // scheduled before this one runs, so a hung JVM is still restarted after about 5 intervals.
+    static readonly TimeSpan RestTimeout = TimeSpan.FromSeconds(60);
     static readonly TimeSpan TcpTimeout = TimeSpan.FromSeconds(3);
 
     private readonly ILogger<Worker> _log = log;
