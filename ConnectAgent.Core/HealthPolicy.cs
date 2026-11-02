@@ -11,6 +11,7 @@ public static class EventIds
     public const int ConnectorRestarted = 2001;
     public const int ChildRestarted = 2002;
     public const int RestPortUnknown = 2003;
+    public const int OrphanKilled = 2004;
     public const int FailedTooLong = 3001;
     public const int HealthCheckError = 3002;
     public const int RestartRequestFailed = 3004;

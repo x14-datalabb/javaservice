@@ -102,6 +102,10 @@ sealed class Worker(ILogger<Worker> log, ILoggerFactory loggers) : BackgroundSer
         }
         _log.LogInformation("Final child command: \"{Exe}\" {Args}", exePath, childArgs);
 
+        // Every child dies with this process; one left by an earlier run is killed first.
+        ChildJob.Create(_log);
+        Orphans.Kill(baseDir, exePath, _log);
+
         var health = HealthSettings.From(svcEnv);
         _log.LogInformation("Health check: {Health}", health);
         var policy = new HealthPolicy(new HealthOptions());
@@ -181,6 +185,7 @@ sealed class Worker(ILogger<Worker> log, ILoggerFactory loggers) : BackgroundSer
 
         if (!child.Start())
             throw new InvalidOperationException("Child process failed to start.");
+        ChildJob.Add(child, _log);
         child.BeginOutputReadLine();
         child.BeginErrorReadLine();
         _child = child;
