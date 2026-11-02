@@ -26,4 +26,8 @@
     <PackageReference Include="Microsoft.Extensions.Logging.EventLog" Version="8.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\ConnectAgent.Core\ConnectAgent.Core.csproj" />
+  </ItemGroup>
+
 </Project>
