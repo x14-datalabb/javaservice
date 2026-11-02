@@ -30,7 +30,12 @@ Debezium retries kills the task for good. Before, the service also stayed `Runni
 - **restarts the child when the REST API has not answered in 5 checks in a row**, at most every
   15 minutes;
 - **sets its own recovery actions** in the service control manager, so Windows restarts
-  Sorcerer if its own process dies: after 1 min, 1 min, then 5 min (`sc qfailure Sorcerer`).
+  Sorcerer if its own process dies: after 1 min, 1 min, then 5 min (`sc qfailure Sorcerer`);
+- **ties `java.exe` to its own process** with a Job object (`JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`),
+  so the child dies with Sorcerer however Sorcerer ends, a crash or `taskkill /F` included;
+- **kills a left-over `java.exe` at start**: any `java.exe` (or process with the child's file
+  name) whose executable lies in the install directory is from an earlier run that did not stop
+  it, since Sorcerer has not started its own child yet (Warning 2004).
 
 This replaces the separate PowerShell watchdog in `msi-agent/watchdog`, with the same rules and
 event ids.
@@ -42,6 +47,11 @@ A fixed port in `listeners` is used when there is no such line. The listener req
 certificate, because it takes the worker's `ssl.*` settings: Sorcerer authenticates with the
 worker's own keystore (`ssl.keystore.location`, PKCS12) and accepts the server only when it
 presents that same certificate. No new access is opened.
+
+The CDC hosts have no internet, so the REST client goes nowhere but the REST address: no proxy,
+and certificate chains for the client and the server certificate are built from what is on the
+machine, without downloading issuers or revocation lists. The keystore is loaded once and kept
+until the file changes; a certificate is never disposed while a TLS handshake may still use it.
 
 ### Events
 
@@ -57,6 +67,7 @@ Application log, source `Sorcerer`. Error 3001 is the one to alarm on.
 | 2001 | Warning | A FAILED connector was restarted |
 | 2002 | Warning | The child is restarted because the REST API does not answer |
 | 2003 | Warning | The REST address is unknown, only the child process is supervised (daily) |
+| 2004 | Warning | A `java.exe` left in the install directory by an earlier run was killed at start |
 | 3001 | Error | A connector has been FAILED for an hour (repeated hourly) |
 | 3002 | Error | The health check itself failed |
 | 3004 | Error | A restart request failed |
@@ -83,4 +94,19 @@ stop (20 checks). Run it as administrator with Python 3 and psutil, and a PKI fr
 
 ```powershell
 python tests\windows\e2e.py <path>\x14javaservice.exe <pki-dir>
+```
+
+`tests/windows/e2e_connect.py` runs the published exe against a real Kafka Connect
+`ConnectStandalone` (Temurin JDK 17, Kafka 3.9.1 as in `msi-agent/tools/download.pl`) laid out
+like the MSI, with the REST listener on `HTTPS://127.0.0.1:0`, client authentication required
+and a local Kafka broker. Outbound connections beyond the local network are blocked by a
+firewall rule and audited for the whole run, like on app10/app11. It checks connector restarts,
+waiting for the database, a child that exits, a JVM whose REST API stops answering, that
+`java.exe` dies when Sorcerer is killed, that a left-over `java.exe` is killed at start, that
+Sorcerer never crashes and that it tries no connection beyond the local network. Fetch the JDK
+and Kafka first, while the machine has internet:
+
+```powershell
+python tests\windows\fetch_connect.py C:\e2e-download
+python tests\windows\e2e_connect.py <path>\x14javaservice.exe <pki-dir> <jdk-dir> <kafka-dir>
 ```

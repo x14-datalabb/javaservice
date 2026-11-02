@@ -12,51 +12,17 @@ import datetime
 import json
 import os
 import shutil
-import socket
-import subprocess
 import sys
-import threading
 import time
 
 import psutil
 
+from sorcerer_test import SVC, FakeDb, check, events, sh, summary, wait_event
+
 EXE, PKI = sys.argv[1], sys.argv[2]
 BASE = r"C:\sorcerer-test"
 HERE = os.path.dirname(os.path.abspath(__file__))
-SVC = "Sorcerer"
 ANTURA_DB, LIME_DB = 14390, 14391
-results = []
-
-
-def sh(*args):
-    return subprocess.run(list(args), capture_output=True, text=True)
-
-
-def ps(script):
-    return subprocess.run(["powershell", "-NoProfile", "-Command", script], capture_output=True, text=True).stdout
-
-
-def check(name, ok, detail=""):
-    results.append((name, bool(ok)))
-    print(f"{'PASS' if ok else 'FAIL'}  {name}  {detail}", flush=True)
-
-
-def events(since):
-    out = ps("Get-WinEvent -FilterHashtable @{LogName='Application'; ProviderName='Sorcerer'; "
-             f"StartTime=[datetime]'{since:%Y-%m-%dT%H:%M:%S}'}} -ErrorAction SilentlyContinue | "
-             "Sort-Object TimeCreated | ForEach-Object { '' + $_.Id + '|' + $_.LevelDisplayName + '|' + "
-             "($_.Message -replace '\\r?\\n', ' ') }")
-    return [tuple(l.split("|", 2)) for l in out.splitlines() if l.count("|") >= 2]
-
-
-def wait_event(since, event_id, timeout, contains=""):
-    end = time.time() + timeout
-    while time.time() < end:
-        for e in events(since):
-            if e[0] == str(event_id) and contains in e[2]:
-                return e
-        time.sleep(2)
-    return None
 
 
 def child():
@@ -84,28 +50,6 @@ def posts():
             return f.read().splitlines()
     except OSError:
         return []
-
-
-class FakeDb:
-    """Something that accepts TCP on the database port, like SQL Server."""
-
-    def __init__(self, port):
-        self.sock = socket.socket()
-        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.sock.bind(("127.0.0.1", port))
-        self.sock.listen(16)
-        threading.Thread(target=self.loop, daemon=True).start()
-
-    def loop(self):
-        while True:
-            try:
-                c, _ = self.sock.accept()
-                c.close()
-            except OSError:
-                return
-
-    def close(self):
-        self.sock.close()
 
 
 def install():
@@ -213,11 +157,7 @@ def main():
 
     antura_db.close()
     sh("sc.exe", "delete", SVC)
-    failed = [n for n, ok in results if not ok]
-    print(f"\n{len(results) - len(failed)} of {len(results)} checks passed", flush=True)
-    if failed:
-        print("failed: " + "; ".join(failed))
-    return 1 if failed else 0
+    return summary()
 
 
 if __name__ == "__main__":
